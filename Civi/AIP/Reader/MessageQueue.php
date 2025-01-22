@@ -16,7 +16,7 @@
 namespace Civi\AIP\Reader;
 
 
-use Cassandra\Exception\TimeoutException;
+use Civi\AIP\Process\TimeoutException;
 use Civi\FormProcessor\API\Exception;
 use CRM_Aip_ExtensionUtil as E;
 use PhpAmqpLib\Channel\AMQPChannel;
@@ -150,13 +150,13 @@ class MessageQueue extends Base
 
     public function canReadSource(string $source): bool
     {
-        return true; //Todo: remove this later
         // connect to the AMQP Message Queue
-        $this->connection = $this->connect();
+        $connection = $this->connect();
         if (!$connection){
             return false;
         }else {
             // Conection was successful
+            $this->connection = $connection;
             return true;
         }
     }
@@ -214,7 +214,7 @@ class MessageQueue extends Base
     public function getNextRecord(): ?array
     {
         // create connection right here
-        $this->connection = $this->connect();
+        $this->connect();
 
         // consume
         $callback = $this->get_process_function();
