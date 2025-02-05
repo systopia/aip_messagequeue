@@ -81,8 +81,8 @@ class MessageQueue extends Base
     public function verifyConfiguration()
     {
         # read config values
-        $requiredConfigParams = ['host', 'port', 'vhost', 'queue', 'exchange'];
-        $optionalConfigParams = ['user', 'pass', 'consumerTag'];
+        $requiredConfigParams = ['host', 'port', 'vhost', 'queue'];
+        $optionalConfigParams = ['user', 'pass', 'consumerTag', 'exchange','routing_key'];
         $sslConfigParams = ['cafile', 'local_cert', 'local_pk', 'verify_peer', 'verify_peer_name'];
         // get required config params
         foreach ($requiredConfigParams as $param){
@@ -102,12 +102,15 @@ class MessageQueue extends Base
             $sslOptions[$param] = $this->getConfigValue($param);
         if (count($sslOptions))
             $this->config['sslOptions'] = $sslOptions;
+        else
+            $this->config['sslOptions'] = '';
     }
 
     protected function connect(): ?AMQPStreamConnection
     {
         // try to create connection
         $this->log('connect to AMQP', 'info');
+        $ssl_context = stream_context_create(['ssl' => $this->config['sslOptions']]);
         try {
             // connect to AMQP
             $this->connection = new AMQPStreamConnection(
@@ -115,7 +118,14 @@ class MessageQueue extends Base
                 $this->config['port'],
                 $this->config['user'],
                 $this->config['pass'],
-                $this->config['vhost']
+                $this->config['vhost'],
+                false,
+                'AMQPLAIN',
+                null,
+                'en_US',
+                3.0,
+                3.0,
+                $ssl_context
             );
             // return connection so Reader can work with  it.
         } catch (AMQPRuntimeException $e) {
@@ -137,7 +147,7 @@ class MessageQueue extends Base
             $this->channel = $this->connection->channel();
             $this->channel->queue_declare($this->config['queue'], false, true, false, false);
             $this->channel->exchange_declare($this->config['exchange'], AMQPExchangeType::DIRECT, false, true, false);
-            $this->channel->queue_bind($this->queue, $this->config['exchange']);
+            $this->channel->queue_bind($this->queue, $this->config['exchange'], $this->config['routing_key']);
         } catch (AMQPTimeoutException $ex) {
             $this->log('AMQPTimeoutException encountered: ' . $ex->getMessage(), 'error');
             return null;
