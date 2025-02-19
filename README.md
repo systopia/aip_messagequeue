@@ -28,7 +28,7 @@ here is an example configuration to connect to an amqp-message-queue with userna
   },
   "process": {
     "log": {
-      "file": "/srv/direktmarketing/aip/processing.log"
+      "file": "/path/to/processing.log"
     },
     "processing_limit": {
       "php_process_time": 560
@@ -70,7 +70,7 @@ more complex example to login with cert file:
   },
   "process": {
     "log": {
-      "file": "/srv/direktmarketing/aip/processing.log"
+      "file": "/path/to/processing.log"
     },
     "processing_limit": {
       "php_process_time": 560
