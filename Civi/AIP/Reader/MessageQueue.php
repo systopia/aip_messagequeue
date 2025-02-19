@@ -235,7 +235,7 @@ class MessageQueue extends Base
             // But maybe we should check if there are already messages in receiveMessages before we wait for new messages and after waiting for new messages
 
             $this->channel->wait(null, false, $timeout);
-            $this->log("****TEST****");
+            #$this->log("****TEST****");
 
             if (count($this->receivedMessages)>0) {
                 // get received message
