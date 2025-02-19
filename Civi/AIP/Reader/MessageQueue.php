@@ -230,7 +230,7 @@ class MessageQueue extends Base
         $callback = $this->get_process_function();
         $this->channel->basic_consume($this->config['queue'], $this->config['consumerTag'], false, false, false, false, $callback);
         // register shutdown callback
-        register_shutdown_function('shutdown', $this->channel, $this->connection);
+        register_shutdown_function([$this, 'shutdown'], $this->channel, $this->connection);
 
         $timeout = $this->getConfigValue('timeout');
         while(count($this->channel->callbacks)) {
