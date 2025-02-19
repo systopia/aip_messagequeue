@@ -21,6 +21,8 @@ use Civi\FormProcessor\API\Exception;
 use CRM_Aip_ExtensionUtil as E;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Connection\AMQPConnectionConfig;
+use PhpAmqpLib\Connection\AMQPConnectionFactory;
 use PhpAmqpLib\Exchange\AMQPExchangeType;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -82,8 +84,7 @@ class MessageQueue extends Base
     {
         # read config values
         $requiredConfigParams = ['host', 'port', 'vhost', 'queue'];
-        $optionalConfigParams = ['user', 'pass', 'consumerTag', 'exchange','routing_key'];
-        $sslConfigParams = ['cafile', 'local_cert', 'local_pk', 'verify_peer', 'verify_peer_name'];
+        $optionalConfigParams = ['user', 'pass', 'consumerTag', 'exchange', 'exchange_type','routing_key','secure', 'cafile', 'local_cert', 'local_pk', 'verify_peer', 'verify_peer_name', 'login_method'];
         // get required config params
         foreach ($requiredConfigParams as $param){
             $this->config[$param] = $this->getConfigValue($param);
@@ -96,37 +97,31 @@ class MessageQueue extends Base
             $this->config[$param] = $this->getConfigValue($param);
             if (!array_key_exists($param,$this->config))
                 $this->config[$param] = '';
-        // get optional ssl config params
-        $sslOptions = [];
-        foreach ($sslConfigParams as $param)
-            $sslOptions[$param] = $this->getConfigValue($param);
-        if (count($sslOptions))
-            $this->config['sslOptions'] = $sslOptions;
-        else
-            $this->config['sslOptions'] = '';
     }
 
     protected function connect(): ?AMQPStreamConnection
     {
         // try to create connection
         $this->log('connect to AMQP', 'info');
-        $ssl_context = stream_context_create(['ssl' => $this->config['sslOptions']]);
         try {
             // connect to AMQP
-            $this->connection = new AMQPStreamConnection(
-                $this->config['host'],
-                $this->config['port'],
-                $this->config['user'],
-                $this->config['pass'],
-                $this->config['vhost'],
-                false,
-                'AMQPLAIN',
-                null,
-                'en_US',
-                3.0,
-                3.0,
-                $ssl_context
-            );
+            $config = new AMQPConnectionConfig();
+            $config->setHost($this->config['host']);
+            $config->setPort($this->config['port']);
+            $config->setUser($this->config['user'] ?? '');
+            $config->setPassword($this->config['pass'] ?? '');
+            $config->setVhost($this->config['vhost']);
+            if(!is_null($this->config['secure']))
+                $config->setIsSecure(True);
+            $config->setSslCaCert($this->config['cafile']);
+            $config->setSslKey($this->config['local_pk']);
+            $config->setSslCert($this->config['local_cert']);
+            $config->setConnectionTimeout(10);
+            if($this->config['login_method'] == 'external')
+                $config->setLoginMethod(AMQPConnectionConfig::AUTH_EXTERNAL);
+
+            $this->connection = AMQPConnectionFactory::create($config);
+
             // return connection so Reader can work with  it.
         } catch (AMQPRuntimeException $e) {
             $this->log('AMQPRuntimeException Error encountered: ' . $e->getMessage(), 'error');
@@ -146,7 +141,7 @@ class MessageQueue extends Base
             // declare and bind queue
             $this->channel = $this->connection->channel();
             $this->channel->queue_declare($this->config['queue'], false, true, false, false);
-            $this->channel->exchange_declare($this->config['exchange'], AMQPExchangeType::DIRECT, false, true, false);
+            $this->channel->exchange_declare($this->config['exchange'], $this->config['exchange_type'], false, true, false);
             $this->channel->queue_bind($this->queue, $this->config['exchange'], $this->config['routing_key']);
         } catch (AMQPTimeoutException $ex) {
             $this->log('AMQPTimeoutException encountered: ' . $ex->getMessage(), 'error');
