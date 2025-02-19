@@ -1,53 +1,84 @@
 # aip_messagequeue
 
+This extensions is only working with: https://github.com/systopia/aip .
+It extends the Automated Import Processor with the functionality to Read JSON-Content from a MessageQueue (eg. RabbitMQ)
 
-(*FIXME: In one or two paragraphs, describe what the extension does and why one would download it. *)
-
-The extension is licensed under [AGPL-3.0](LICENSE.txt).
-
-## Requirements
-
-* PHP v7.4+
-* CiviCRM (*FIXME: Version number*)
-
-## Installation (Web UI)
-
-Learn more about installing CiviCRM extensions in the [CiviCRM Sysadmin Guide](https://docs.civicrm.org/sysadmin/en/latest/customize/extensions/).
-
-## Installation (CLI, Zip)
-
-Sysadmins and developers may download the `.zip` file for this extension and
-install it with the command-line tool [cv](https://github.com/civicrm/cv).
-
-```bash
-cd <extension-dir>
-cv dl aip_messagequeue@https://github.com/FIXME/aip_messagequeue/archive/master.zip
+here is an example configuration to connect to an amqp-message-queue with username and password
 ```
-or
-```bash
-cd <extension-dir>
-cv dl aip_messagequeue@https://lab.civicrm.org/extensions/aip_messagequeue/-/archive/main/aip_messagequeue-main.zip
-```
+{
+  "finder": {
+    "class": "Civi\\AIP\\Finder\\DummyFinder"
+  },
+  "reader": {
+    "host": "www.hostname.de",
+    "port": "5673",
+    "vhost": "your_vhost",
+    "user": "your_user_name",
+    "pass": "your_password",
+    "verify_peer": "true",
+    "queue": "your-queue",
+    "exchange": "your-exchange",
+    "exchange_type": "topic",
+    "class": "Civi\\AIP\\Reader\\MessageQueue"
+  },
+  "processor": {
+    "api_entity": "FormProcessor",
+    "api_action": "test",
+    "class": "Civi\\AIP\\Processor\\Api3"
+  },
+  "process": {
+    "log": {
+      "file": "/srv/direktmarketing/aip/processing.log"
+    },
+    "processing_limit": {
+      "php_process_time": 560
+    }
+  },
+  "log": {
+    "level": "info"
+  }
+}
 
-## Installation (CLI, Git)
-
-Sysadmins and developers may clone the [Git](https://en.wikipedia.org/wiki/Git) repo for this extension and
-install it with the command-line tool [cv](https://github.com/civicrm/cv).
-
-```bash
-git clone https://github.com/FIXME/aip_messagequeue.git
-cv en aip_messagequeue
-```
-or
-```bash
-git clone https://lab.civicrm.org/extensions/aip_messagequeue.git
-cv en aip_messagequeue
 ```
 
-## Getting Started
 
-(* FIXME: Where would a new user navigate to get started? What changes would they see? *)
+more complex example to login with cert file:
+```
+{
+  "finder": {
+    "class": "Civi\\AIP\\Finder\\DummyFinder"
+  },
+  "reader": {
+    "host": "www.hostname.de",
+    "port": "5673",
+    "vhost": "your_vhost",
+    "secure": true,
+    "cafile": "/path/to/your/cafile.crt",
+    "local_cert": "/patch/to/certfile.pem",
+    "local_pk": "/path/To/pkey.pem",
+    "verify_peer": "true",
+    "queue": "your-queue",
+    "exchange": "your-exchange",
+    "exchange_type": "topic",
+    "login_method": "external",
+    "class": "Civi\\AIP\\Reader\\MessageQueue"
+  },
+  "processor": {
+    "api_entity": "FormProcessor",
+    "api_action": "test",
+    "class": "Civi\\AIP\\Processor\\Api3"
+  },
+  "process": {
+    "log": {
+      "file": "/srv/direktmarketing/aip/processing.log"
+    },
+    "processing_limit": {
+      "php_process_time": 560
+    }
+  },
+  "log": {
+    "level": "info"
+  }
+}
 
-## Known Issues
-
-(* FIXME *)
+```
