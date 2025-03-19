@@ -265,7 +265,7 @@ class MessageQueue extends Base
     public function markLastRecordProcessed()
     {
         // send ack to message broker
-        $this->currentMessage->ack();
+        //$this->currentMessage->ack();
 
         // calculate internal countings
         $this->records_processed_in_this_session++;
