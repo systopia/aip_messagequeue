@@ -93,10 +93,11 @@ class MessageQueue extends Base
             }
         }
         // get optional params
-        foreach ($optionalConfigParams as $param)
+        foreach ($optionalConfigParams as $param){
             $this->config[$param] = $this->getConfigValue($param);
             if (!array_key_exists($param,$this->config))
                 $this->config[$param] = '';
+        }
     }
 
     protected function connect(): ?AMQPStreamConnection
@@ -219,14 +220,16 @@ class MessageQueue extends Base
     public function getNextRecord(): ?array
     {
         // create connection right here
-        $this->connect();
+        if(!$this->connection->isConnected())
+            $this->connect();
 
         // consume
-        $callback = $this->get_process_function();
-        $this->channel->basic_consume($this->config['queue'], $this->config['consumerTag'], false, false, false, false, $callback);
-        // register shutdown callback
-        register_shutdown_function([$this, 'shutdown'], $this->channel, $this->connection);
-
+        if(!count($this->channel->callbacks)){
+            $callback = $this->get_process_function();
+            $this->channel->basic_consume($this->config['queue'], $this->config['consumerTag'], false, false, false, false, $callback);
+            // register shutdown callback
+            register_shutdown_function([$this, 'shutdown'], $this->channel, $this->connection);
+        }
         $timeout = $this->getConfigValue('timeout');
         while(count($this->channel->callbacks)) {
             // Todo: Wait only until callback function was called
@@ -235,7 +238,6 @@ class MessageQueue extends Base
             // But maybe we should check if there are already messages in receiveMessages before we wait for new messages and after waiting for new messages
 
             $this->channel->wait(null, false, $timeout);
-            $this->log("****TEST****");
 
             if (count($this->receivedMessages)>0) {
                 // get received message
