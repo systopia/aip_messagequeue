@@ -1,7 +1,7 @@
 <?php
 
 require_once 'aip_messagequeue.civix.php';
-require_once(__DIR__.'/../aip/vendor/autoload.php');
+require_once(__DIR__.'/vendor/autoload.php');
 // phpcs:disable
 use CRM_AipMessagequeue_ExtensionUtil as E;
 // phpcs:enable
