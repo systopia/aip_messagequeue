@@ -141,6 +141,9 @@ class MessageQueue extends Base
         try {
             // declare and bind queue
             $this->channel = $this->connection->channel();
+            if(isset($this->config['prefetch'])){
+              $this->channel.basicQos($this->config['prefetch']);
+            }
             $this->channel->queue_declare($this->config['queue'], false, true, false, false);
             $this->channel->exchange_declare($this->config['exchange'], $this->config['exchange_type'], false, true, false);
             $this->channel->queue_bind($this->queue, $this->config['exchange'], $this->config['routing_key']);
