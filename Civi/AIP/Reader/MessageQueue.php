@@ -277,9 +277,13 @@ class MessageQueue extends Base
 
     public function markLastRecordFailed()
     {
+        // mark record as failed
         $this->records_processed_in_this_session++;
         $this->setFailedRecordCount($this->getFailedRecordCount() + 1);
         $this->current_record = $this->lookahead_record;
+
+        // end connection gracefully
+        $this->cleanup_connection();
     }
 
     /**
