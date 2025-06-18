@@ -143,7 +143,7 @@ class MessageQueue extends Base
             // declare and bind queue
             $this->channel = $this->connection->channel();
             if(isset($this->config['prefetch'])){
-              $this->channel->basic_qos($this->config['prefetch']);
+              $this->channel->basic_qos(0,$this->config['prefetch'], 0);
             }
             if(isset($this->config['x-queue-type'])){
               $queue_arguments = new AMQPTable(['x-queue-type' => $this->config['x-queue-type']]);
