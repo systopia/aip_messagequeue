@@ -25,6 +25,7 @@ use PhpAmqpLib\Connection\AMQPConnectionConfig;
 use PhpAmqpLib\Connection\AMQPConnectionFactory;
 use PhpAmqpLib\Exchange\AMQPExchangeType;
 use PhpAmqpLib\Message\AMQPMessage;
+use PhpAmqpLib\Wire\AMQPTable;
 
 class MessageQueue extends Base
 {
@@ -84,7 +85,7 @@ class MessageQueue extends Base
     {
         # read config values
         $requiredConfigParams = ['host', 'port', 'vhost', 'queue'];
-        $optionalConfigParams = ['user', 'pass', 'consumerTag', 'exchange', 'exchange_type','routing_key','secure', 'cafile', 'local_cert', 'local_pk', 'verify_peer', 'verify_peer_name', 'login_method'];
+        $optionalConfigParams = ['user', 'pass', 'consumerTag', 'exchange', 'exchange_type','routing_key','secure', 'cafile', 'local_cert', 'local_pk', 'verify_peer', 'verify_peer_name', 'login_method', 'prefetch', 'x-queue-type'];
         // get required config params
         foreach ($requiredConfigParams as $param){
             $this->config[$param] = $this->getConfigValue($param);
@@ -144,7 +145,12 @@ class MessageQueue extends Base
             if(isset($this->config['prefetch'])){
               $this->channel.basicQos($this->config['prefetch']);
             }
-            $this->channel->queue_declare($this->config['queue'], false, true, false, false);
+            if(isset($this->config['x-queue-type'])){
+              $queue_arguments = new AMQPTable(['x-queue-type' => $this->config['x-queue-type']]);
+            }else{
+              $queue_arguments = [];
+            }
+            $this->channel->queue_declare($this->config['queue'], false, true, false, false,false,  $queue_arguments);
             $this->channel->exchange_declare($this->config['exchange'], $this->config['exchange_type'], false, true, false);
             $this->channel->queue_bind($this->queue, $this->config['exchange'], $this->config['routing_key']);
         } catch (AMQPTimeoutException $ex) {
