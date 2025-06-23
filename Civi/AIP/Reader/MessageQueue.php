@@ -16,13 +16,14 @@
 namespace Civi\AIP\Reader;
 
 
-use Civi\AIP\Process\TimeoutException;
+use Civi\AIP\TimeoutException;
 use Civi\FormProcessor\API\Exception;
 use CRM_Aip_ExtensionUtil as E;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Connection\AMQPConnectionConfig;
 use PhpAmqpLib\Connection\AMQPConnectionFactory;
+use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Exchange\AMQPExchangeType;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
@@ -85,7 +86,7 @@ class MessageQueue extends Base
     {
         # read config values
         $requiredConfigParams = ['host', 'port', 'vhost', 'queue'];
-        $optionalConfigParams = ['user', 'pass', 'consumerTag', 'exchange', 'exchange_type','routing_key','secure', 'cafile', 'local_cert', 'local_pk', 'verify_peer', 'verify_peer_name', 'login_method', 'prefetch', 'x-queue-type'];
+        $optionalConfigParams = ['user', 'pass', 'consumerTag', 'exchange', 'exchange_type','routing_key','secure', 'cafile', 'local_cert', 'local_pk', 'verify_peer', 'verify_peer_name', 'login_method', 'prefetch', 'x-queue-type', 'timeout'];
         // get required config params
         foreach ($requiredConfigParams as $param){
             $this->config[$param] = $this->getConfigValue($param);
@@ -239,15 +240,17 @@ class MessageQueue extends Base
             // register shutdown callback
             register_shutdown_function([$this, 'shutdown'], $this->channel, $this->connection);
         }
-        $timeout = $this->getConfigValue('timeout');
-        while(count($this->channel->callbacks)) {
+        $timeout = $this->config['timeout'] ?? 5; // default timetout 5
+        while($this->connection->isConnected() && count($this->channel->callbacks)) {
             // Todo: Wait only until callback function was called
             // Currently this is processing only one Message
             // maybe this is ok, because getNextRecord is supposed to deliver only one record
             // But maybe we should check if there are already messages in receiveMessages before we wait for new messages and after waiting for new messages
-
-            $this->channel->wait(null, false, $timeout);
-
+            try{
+              $this->channel->wait(null, false, $timeout);
+            }catch (AMQPTimeoutException $e) {
+              throw new TimeoutException("Listening to Messages timed out.");
+            }
             if (count($this->receivedMessages)>0) {
                 // get received message
                 $this->currentMessage = array_shift($this->receivedMessages);
@@ -292,7 +295,7 @@ class MessageQueue extends Base
         $this->current_record = $this->lookahead_record;
 
         // end connection gracefully
-        $this->cleanup_connection();
+        $this->shutdown($this->channel, $this->connection);
     }
 
     /**
