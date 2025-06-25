@@ -294,8 +294,6 @@ class MessageQueue extends Base
         $this->setFailedRecordCount($this->getFailedRecordCount() + 1);
         $this->current_record = $this->lookahead_record;
 
-        // end connection gracefully
-        $this->shutdown($this->channel, $this->connection);
     }
 
     /**
@@ -344,6 +342,8 @@ class MessageQueue extends Base
     public function markSourceFailed(string $uri)
     {
         $this->setStateValue('current_file', null);
+        // end connection gracefully
+        $this->shutdown($this->channel, $this->connection);
     }
 
     /**
